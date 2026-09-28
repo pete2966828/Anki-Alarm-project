@@ -67,7 +67,9 @@ Your answers go into AnkiDroid right away. They reach desktop Anki the usual way
   Go to Settings → Apps → Anki Alarm → Battery and choose **Unrestricted** / "Don't optimize".
 - **Always math, never cards.** Check that AnkiDroid access is allowed. In AnkiDroid, check that Settings → Advanced → **Enable AnkiDroid API** is on.
   Also check that the chosen deck has cards due today.
-- **Images or audio on cards.** Card text shows, but images and sounds from your collection don't. That's a limitation of AnkiDroid's API.
+- **Pictures on cards.** AnkiDroid doesn't let other apps read your card pictures, so add them once: in AnkiDroid open the deck menu →
+  **Export** → **Anki deck package (.apkg)** with **Include media** ticked, then in Anki Alarm tap **Card pictures → Add deck file**.
+  Exports from desktop Anki work too. Add the file again after adding new pictures. Card sounds aren't played.
 - **Silent alarm.** The app uses the alarm volume and your default alarm sound. If the alarm volume is at zero, it raises it to 60%.
 
 ## Building locally

@@ -55,4 +55,7 @@ dependencies {
     implementation("androidx.camera:camera-view:1.4.1")
     implementation("com.google.guava:listenablefuture:1.0")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Unpacking card pictures from newer Anki exports, which compress files with zstd.
+    implementation("com.github.luben:zstd-jni:1.5.7-4@aar")
 }

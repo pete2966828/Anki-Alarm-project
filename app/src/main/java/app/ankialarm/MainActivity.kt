@@ -257,6 +257,7 @@ class MainActivity : ComponentActivity() {
                         onToggle = { on -> saveAlarm(alarm.copy(enabled = on), announce = on) },
                     )
                 }
+                item { CardPicturesCard() }
                 item { WakeCodeCard() }
                 item { SettingsCard() }
                 item { AboutFooter() }
@@ -329,6 +330,54 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 Switch(checked = alarm.enabled, onCheckedChange = onToggle)
+            }
+        }
+    }
+
+    @Composable
+    private fun CardPicturesCard() {
+        var count by remember { mutableIntStateOf(CardMedia.count(this@MainActivity)) }
+        var adding by remember { mutableStateOf(false) }
+        val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            adding = true
+            lifecycleScope.launch {
+                val added = withContext(Dispatchers.IO) {
+                    runCatching { CardMedia.addFromPackage(this@MainActivity, uri) }.getOrNull()
+                }
+                adding = false
+                count = CardMedia.count(this@MainActivity)
+                val message = when (added) {
+                    null -> "Couldn't read that file. Pick an .apkg or .colpkg exported from Anki."
+                    0 -> "No pictures in that file. When exporting, tick \"Include media\"."
+                    else -> "Added $added pictures"
+                }
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            }
+        }
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Card pictures", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(
+                    "AnkiDroid doesn't let other apps see your card pictures. To show them, export your deck in AnkiDroid " +
+                        "(deck menu \u2192 Export \u2192 Anki deck package, with \"Include media\" ticked) and add the file here. " +
+                        "Add it again after you add new pictures to your cards.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (count > 0) {
+                    Text("$count pictures saved", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !adding) {
+                        Text(if (adding) "Adding\u2026" else "Add deck file")
+                    }
+                    if (count > 0 && !adding) {
+                        TextButton(onClick = {
+                            CardMedia.clear(this@MainActivity)
+                            count = 0
+                        }) { Text("Remove all") }
+                    }
+                }
             }
         }
     }

@@ -605,11 +605,14 @@ private fun MathTask(task: Task.Math, onSubmit: (String) -> Boolean) {
 @Composable
 private fun CardHtml(html: String, modifier: Modifier) {
     val page = wrapHtml(html, isSystemInDarkTheme())
+    val baseUrl = CardMedia.baseUrl(LocalContext.current)
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             WebView(ctx).apply {
                 settings.javaScriptEnabled = false
+                // Lets <img src="cat.jpg"> load pictures saved from the user's deck file.
+                settings.allowFileAccess = true
                 setBackgroundColor(Color.TRANSPARENT)
             }
         },
@@ -617,7 +620,7 @@ private fun CardHtml(html: String, modifier: Modifier) {
             // Only reload when the card changes, not on every recomposition.
             if (view.tag != page) {
                 view.tag = page
-                view.loadDataWithBaseURL(null, page, "text/html", "utf-8", null)
+                view.loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)
             }
         },
     )
