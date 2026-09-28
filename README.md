@@ -85,3 +85,7 @@ It uses AnkiDroid's public content provider (`com.ichi2.anki.flashcards`, permis
 - the `com.ichi2.anki.DO_SYNC` intent asks AnkiDroid to sync
 
 See `app/src/main/java/app/ankialarm/AnkiDroid.kt`.
+
+## About
+
+Made by Pete. Free for anyone to use, for any exam. Not for resale.

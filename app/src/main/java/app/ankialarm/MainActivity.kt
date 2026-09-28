@@ -86,6 +86,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -258,6 +259,7 @@ class MainActivity : ComponentActivity() {
                 }
                 item { WakeCodeCard() }
                 item { SettingsCard() }
+                item { AboutFooter() }
             }
         }
     }
@@ -551,6 +553,23 @@ private fun EditAlarmScreen(
 }
 
 private const val SHAKE_STEP = 5
+
+@Composable
+private fun AboutFooter() {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("Made by Pete", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+        Text(
+            "Free for anyone to use, for any exam. Not for resale.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
 
 @Composable
 private fun RegisterCodeDialog(onDismiss: () -> Unit, onCode: (String) -> Unit) {
