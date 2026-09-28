@@ -17,6 +17,19 @@ cards due, you get simple math problems instead, so you can always turn the alar
 
 Each alarm has its own time, repeat days, label, deck (or "current deck in AnkiDroid"), number of cards, sound, and snooze (off / 5 / 10 min, up to 3 times).
 
+**Shakes before each card:** Off, or 5–50 in steps of 5. Each card is hidden behind a "Shake your phone!" counter until you've
+shaken the phone that many times, which gets you moving before you have to think. A firm shake or a quick flip of the phone counts.
+If no shake registers for 90 seconds (for example, a broken sensor), a "Shaking not working?" link appears so you can never get stuck.
+Phones without a motion sensor skip the shaking.
+
+**Scan your wake-up code first:** on the main screen, under **Wake-up code**, scan any barcode or QR code once. A product barcode
+(toothpaste, coffee jar) or a QR code printed and stuck in the bathroom both work. Alarms with this switch on show a camera
+view instead of cards until you walk over and scan that exact code. The camera needs permission, and codes are read on the phone
+without internet. If scanning isn't possible after 3 minutes, a "Can't scan it?" link appears.
+
+**Volume:** with **Gentle start**, the alarm begins quietly and reaches full volume after 30 seconds. While you're answering
+(touching the screen, typing, shaking), it drops to 30% so you can think. Stop for 30 seconds and it's back at full volume.
+
 **Sound:** use the default alarm sound, pick one of the phone's built-in sounds, or tap **Add from file…** and choose any audio file
 (MP3, M4A, OGG, WAV… up to 30 MB). Added files are copied into the app, so the alarm keeps working if you move or delete the original.
 They stay in the list for your other alarms. Tap **Play** to preview a sound at alarm volume. If a sound can't be played when the alarm rings,

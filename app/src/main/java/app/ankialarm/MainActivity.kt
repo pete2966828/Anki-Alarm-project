@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +40,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -63,6 +65,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -85,6 +88,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
@@ -125,6 +130,16 @@ class MainActivity : ComponentActivity() {
     private val askedPermissions = mutableSetOf<String>()
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
+    private var wakeCode by mutableStateOf<String?>(null)
+    private var registeringCode by mutableStateOf(false)
+    private val cameraLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            registeringCode = true
+        } else {
+            Toast.makeText(this, "Allow camera access in the app's settings to scan a wake-up code.", Toast.LENGTH_LONG).show()
+            openAppSettings()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,6 +156,7 @@ class MainActivity : ComponentActivity() {
         alarms = AlarmStore.all(this)
         setup = SetupStatus.check(this)
         syncAfter = AlarmStore.syncAfterAlarm(this)
+        wakeCode = AlarmStore.wakeCode(this)
         lifecycleScope.launch {
             decks = withContext(Dispatchers.IO) {
                 if (AnkiDroid.isAvailable(this@MainActivity)) {
@@ -240,6 +256,7 @@ class MainActivity : ComponentActivity() {
                         onToggle = { on -> saveAlarm(alarm.copy(enabled = on), announce = on) },
                     )
                 }
+                item { WakeCodeCard() }
                 item { SettingsCard() }
             }
         }
@@ -314,6 +331,49 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun startRegisteringCode() {
+        if (hasCameraPermission(this)) registeringCode = true else cameraLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    @Composable
+    private fun WakeCodeCard() {
+        val code = wakeCode
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Wake-up code", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(
+                    if (code == null) {
+                        "Scan any barcode or QR code: a toothpaste tube, a printed QR on the bathroom mirror, a coffee jar. " +
+                            "Alarms with \"Scan your wake-up code first\" won't show cards until you get up and scan it."
+                    } else {
+                        "Saved (${code.take(32)}${if (code.length > 32) "…" else ""}). Alarms with \"Scan your wake-up code first\" need it."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { startRegisteringCode() }) { Text(if (code == null) "Scan a code" else "Change code") }
+                    if (code != null) {
+                        TextButton(onClick = {
+                            AlarmStore.setWakeCode(this@MainActivity, null)
+                            wakeCode = null
+                        }) { Text("Remove") }
+                    }
+                }
+            }
+        }
+        if (registeringCode) {
+            RegisterCodeDialog(
+                onDismiss = { registeringCode = false },
+                onCode = {
+                    AlarmStore.setWakeCode(this@MainActivity, it)
+                    wakeCode = it
+                    registeringCode = false
+                    Toast.makeText(this@MainActivity, "Wake-up code saved", Toast.LENGTH_SHORT).show()
+                },
+            )
+        }
+    }
+
     @Composable
     private fun SettingsCard() {
         ElevatedCard(Modifier.fillMaxWidth()) {
@@ -363,6 +423,10 @@ private fun EditAlarmScreen(
     var snooze by remember { mutableIntStateOf(initial.snoozeMinutes) }
     var soundUri by remember { mutableStateOf(initial.soundUri) }
     var soundName by remember { mutableStateOf(initial.soundName) }
+    var shakes by remember { mutableIntStateOf(initial.shakesPerCard) }
+    var requireScan by remember { mutableStateOf(initial.requireScan) }
+    var gentleStart by remember { mutableStateOf(initial.gentleStart) }
+    val hasWakeCode = remember { AlarmStore.wakeCode(context) != null }
 
     fun build() = initial.copy(
         hour = time.hour,
@@ -375,6 +439,9 @@ private fun EditAlarmScreen(
         snoozeMinutes = snooze,
         soundUri = soundUri,
         soundName = soundName,
+        shakesPerCard = shakes,
+        requireScan = requireScan,
+        gentleStart = gentleStart,
         enabled = true,
     )
 
@@ -422,6 +489,44 @@ private fun EditAlarmScreen(
                     FilledTonalButton(onClick = { cards = (cards + 1).coerceAtMost(30) }) { Text("+") }
                 }
             }
+            Section("Get out of bed") {
+                SwitchRow(
+                    title = "Scan your wake-up code first",
+                    detail = if (hasWakeCode) {
+                        "No cards until you get up and scan the code you saved."
+                    } else {
+                        "Save a wake-up code on the main screen to use this."
+                    },
+                    checked = requireScan && hasWakeCode,
+                    enabled = hasWakeCode,
+                    onChange = { requireScan = it },
+                )
+            }
+            Section("Volume") {
+                SwitchRow(
+                    title = "Gentle start",
+                    detail = "Starts quietly and reaches full volume after 30 seconds.",
+                    checked = gentleStart,
+                    onChange = { gentleStart = it },
+                )
+                Text(
+                    "While you're answering, the alarm drops to 30%. Stop touching the screen for 30 seconds and it's back at full volume.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Section("Shakes before each card") {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    FilledTonalButton(onClick = { shakes = (shakes - SHAKE_STEP).coerceAtLeast(0) }) { Text("−") }
+                    Text(if (shakes == 0) "Off" else "$shakes", style = MaterialTheme.typography.headlineSmall)
+                    FilledTonalButton(onClick = { shakes = (shakes + SHAKE_STEP).coerceAtMost(50) }) { Text("+") }
+                }
+                Text(
+                    "Each card stays hidden until you shake your phone this many times, so you can't answer half asleep.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Section("Deck") { DeckPicker(deck, decks) { deck = it } }
             Section("Sound") {
                 SoundPicker(soundUri, soundName) { uri, name ->
@@ -442,6 +547,42 @@ private fun EditAlarmScreen(
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+private const val SHAKE_STEP = 5
+
+@Composable
+private fun RegisterCodeDialog(onDismiss: () -> Unit, onCode: (String) -> Unit) {
+    var done by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.8f), shape = MaterialTheme.shapes.extraLarge) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Point the camera at your code", style = MaterialTheme.typography.titleMedium)
+                BarcodeScanner(
+                    onCode = {
+                        if (!done) {
+                            done = true
+                            onCode(it)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)),
+                )
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Cancel") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwitchRow(title: String, detail: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 
