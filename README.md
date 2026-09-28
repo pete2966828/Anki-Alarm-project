@@ -35,6 +35,9 @@ without internet. If scanning isn't possible after 3 minutes, a "Can't scan it?"
 They stay in the list for your other alarms. Tap **Play** to preview a sound at alarm volume. If a sound can't be played when the alarm rings,
 the default alarm sound plays instead.
 
+**Language:** English or Thai (ไทย). By default the app follows the phone's language. To change it, scroll to
+**Language · ภาษา** at the bottom of the main screen.
+
 ## Install on your phone
 
 You don't need a computer. GitHub Actions builds the app on every push.

@@ -1,3 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Anki Alarm</string>
+    <string name="app_name" translatable="false">Anki Alarm</string>
+    <!-- Shown in both languages so anyone can find the switch. -->
+    <string name="language_title" translatable="false">Language · ภาษา</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_thai" translatable="false">ไทย</string>
+    <string name="add_alarm">Add alarm</string>
+    <string name="no_alarms">No alarms yet. Tap + to add one.</string>
+    <string name="current_deck_short">current deck</string>
+    <string name="alarm_set_in">Alarm set for %1$s from now</string>
+    <string name="finish_setup">Finish setup</string>
+    <string name="setup_install_anki_title">Install AnkiDroid</string>
+    <string name="setup_install_anki_detail">Your cards come from AnkiDroid. Until it\'s installed, alarms ask math questions instead.</string>
+    <string name="action_install">Install</string>
+    <string name="setup_anki_access_title">Allow access to AnkiDroid</string>
+    <string name="setup_anki_access_detail">Needed to show your due cards and save your answers.</string>
+    <string name="action_allow">Allow</string>
+    <string name="setup_notifications_title">Allow notifications</string>
+    <string name="setup_notifications_detail">The ringing alarm is shown as a notification.</string>
+    <string name="setup_exact_title">Allow alarms &amp; reminders</string>
+    <string name="setup_exact_detail">Lets the alarm ring at the exact minute.</string>
+    <string name="action_open">Open</string>
+    <string name="setup_fullscreen_title">Allow full-screen alarms</string>
+    <string name="setup_fullscreen_detail">Lets your cards appear over the lock screen.</string>
+    <string name="pictures_title">Card pictures</string>
+    <string name="pictures_detail">AnkiDroid doesn\'t let other apps see your card pictures. To show them, export your deck in AnkiDroid (deck menu → Export → Anki deck package, with \"Include media\" ticked) and add the file here. Add it again after you add new pictures to your cards.</string>
+    <string name="pictures_add">Add deck file</string>
+    <string name="adding">Adding…</string>
+    <string name="remove_all">Remove all</string>
+    <string name="pictures_read_error">Couldn\'t read that file. Pick an .apkg or .colpkg exported from Anki.</string>
+    <string name="pictures_none">No pictures in that file. When exporting, tick \"Include media\".</string>
+    <string name="wake_code_title">Wake-up code</string>
+    <string name="wake_code_empty">Scan any barcode or QR code: a toothpaste tube, a printed QR on the bathroom mirror, a coffee jar. Alarms with \"Scan your wake-up code first\" won\'t show cards until you get up and scan it.</string>
+    <string name="wake_code_saved">Saved (%1$s). Alarms with \"Scan your wake-up code first\" need it.</string>
+    <string name="wake_code_scan">Scan a code</string>
+    <string name="wake_code_change">Change code</string>
+    <string name="action_remove">Remove</string>
+    <string name="wake_code_saved_toast">Wake-up code saved</string>
+    <string name="camera_needed">Allow camera access in the app\'s settings to scan a wake-up code.</string>
+    <string name="point_camera">Point the camera at your code</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="sync_title">Sync after waking up</string>
+    <string name="sync_detail">When you\'re done, unlock your phone and AnkiDroid syncs your reviews to AnkiWeb, and from there to Anki on your computer.</string>
+    <string name="language_system">Phone default</string>
+    <string name="made_by">Made by Pete</string>
+    <string name="free_note">Free for anyone to use, for any exam. Not for resale.</string>
+    <string name="new_alarm">New alarm</string>
+    <string name="edit_alarm">Edit alarm</string>
+    <string name="action_delete">Delete</string>
+    <string name="save_and_test">Save &amp; test</string>
+    <string name="save">Save</string>
+    <string name="section_repeat">Repeat</string>
+    <string name="label_hint">Label (optional)</string>
+    <string name="section_cards">Cards to review before it stops</string>
+    <string name="section_get_up">Get out of bed</string>
+    <string name="scan_first_title">Scan your wake-up code first</string>
+    <string name="scan_first_detail">No cards until you get up and scan the code you saved.</string>
+    <string name="scan_first_needs_code">Save a wake-up code on the main screen to use this.</string>
+    <string name="section_volume">Volume</string>
+    <string name="gentle_title">Gentle start</string>
+    <string name="gentle_detail">Starts quietly and reaches full volume after 30 seconds.</string>
+    <string name="volume_note">While you\'re answering, the alarm drops to 30 percent. Stop touching the screen for 30 seconds and it\'s back at full volume.</string>
+    <string name="section_shakes">Shakes before each card</string>
+    <string name="off">Off</string>
+    <string name="shakes_detail">Each card stays hidden until you shake your phone this many times, so you can\'t answer half asleep.</string>
+    <string name="section_deck">Deck</string>
+    <string name="current_deck">Current deck in AnkiDroid</string>
+    <string name="deck_needs_access">Allow access to AnkiDroid on the main screen to pick a specific deck.</string>
+    <string name="deck_fallback">Deck %1$s</string>
+    <string name="section_sound">Sound</string>
+    <string name="default_sound">Default alarm sound</string>
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
+    <string name="alarm_sound_title">Alarm sound</string>
+    <string name="phone_sound">Phone sound</string>
+    <string name="choose_phone_sound">Choose a phone sound…</string>
+    <string name="add_from_file">Add from file…</string>
+    <string name="done">Done</string>
+    <string name="remove_item">Remove %1$s</string>
+    <string name="no_sound_picker">This phone has no sound picker.</string>
+    <string name="sound_file_error">Couldn\'t use that file. Pick an audio file (MP3, M4A, OGG, WAV…) under 30 MB.</string>
+    <string name="section_snooze">Snooze</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="once_then_off">Once, then it turns itself off</string>
+    <string name="days_once">Once</string>
+    <string name="days_every">Every day</string>
+    <string name="days_weekdays">Weekdays</string>
+    <string name="days_weekends">Weekends</string>
+    <string name="until_days">%1$d d %2$d h</string>
+    <string name="until_hours">%1$d h %2$d min</string>
+    <string name="until_minutes">%1$d min</string>
+    <string name="snoozing_for">Snoozing for %1$d min</string>
+    <string name="save_answer_failed">Couldn\'t save your last answer in AnkiDroid.</string>
+    <string name="fallback_not_installed">AnkiDroid isn\'t installed, so solve this instead.</string>
+    <string name="fallback_no_permission">Anki Alarm isn\'t allowed to read AnkiDroid yet, so solve this instead.</string>
+    <string name="fallback_none_due">No cards are due right now, so solve this instead.</string>
+    <string name="fallback_error">Couldn\'t load a card from AnkiDroid, so solve this instead.</string>
+    <string name="all_done">Done!</string>
+    <string name="show_answer">Show answer</string>
+    <string name="snooze_n">Snooze %1$d min</string>
+    <string name="scan_prompt">Get up and scan your wake-up code</string>
+    <string name="wrong_code">That\'s not your wake-up code.</string>
+    <string name="skip_scan">Can\'t scan it? Skip this step</string>
+    <string name="shake_prompt">Shake your phone!</string>
+    <string name="skip_shake">Shaking not working? Show the card</string>
+    <string name="ease_again">Again</string>
+    <string name="ease_hard">Hard</string>
+    <string name="ease_good">Good</string>
+    <string name="ease_easy">Easy</string>
+    <string name="answer_label">Answer</string>
+    <string name="not_quite">Not quite, try again</string>
+    <string name="check">Check</string>
+    <string name="channel_ringing">Ringing alarm</string>
+    <string name="wake_up">Wake up!</string>
+    <plurals name="cards_count">
+        <item quantity="one">%d card</item>
+        <item quantity="other">%d cards</item>
+    </plurals>
+    <plurals name="review_to_stop">
+        <item quantity="one">Review %d card to stop the alarm</item>
+        <item quantity="other">Review %d cards to stop the alarm</item>
+    </plurals>
+    <plurals name="more_shakes">
+        <item quantity="one">more shake to see the card</item>
+        <item quantity="other">more shakes to see the card</item>
+    </plurals>
+    <plurals name="pictures_saved">
+        <item quantity="one">%d picture saved</item>
+        <item quantity="other">%d pictures saved</item>
+    </plurals>
+    <plurals name="pictures_added">
+        <item quantity="one">Added %d picture</item>
+        <item quantity="other">Added %d pictures</item>
+    </plurals>
 </resources>

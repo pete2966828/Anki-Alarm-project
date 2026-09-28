@@ -59,6 +59,8 @@ class AlarmService : Service() {
         return if (answering) minOf(ramp, ANSWERING_VOLUME) else ramp
     }
 
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -172,7 +174,7 @@ class AlarmService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Ringing alarm", NotificationManager.IMPORTANCE_HIGH).apply {
+                NotificationChannel(CHANNEL_ID, getString(R.string.channel_ringing), NotificationManager.IMPORTANCE_HIGH).apply {
                     // The service plays the sound and vibration itself.
                     setSound(null, null)
                     enableVibration(false)
@@ -186,8 +188,8 @@ class AlarmService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_alarm)
-            .setContentTitle(alarm?.label?.ifBlank { null } ?: "Wake up!")
-            .setContentText("Review ${cardsText(alarm?.cardsToReview ?: 1)} to stop the alarm")
+            .setContentTitle(alarm?.label?.ifBlank { null } ?: getString(R.string.wake_up))
+            .setContentText(plural(R.plurals.review_to_stop, alarm?.cardsToReview ?: 1))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

@@ -2,6 +2,7 @@ package app.ankialarm
 
 import android.app.Application
 import android.app.KeyguardManager
+import android.content.Context
 import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -54,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -136,6 +138,8 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Lang.wrap(newBase))
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         AlarmService.noteActivity()
         return super.dispatchTouchEvent(ev)
@@ -180,7 +184,7 @@ class AlarmActivity : ComponentActivity() {
         finishingAlarm = true
         AlarmScheduler.scheduleSnooze(this, r.alarm.id, r.alarm.snoozeMinutes, r.snoozeCount + 1)
         AlarmService.stop(this)
-        Toast.makeText(this, "Snoozing for ${r.alarm.snoozeMinutes} min", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.snoozing_for, r.alarm.snoozeMinutes), Toast.LENGTH_SHORT).show()
         finish()
     }
 }
@@ -217,6 +221,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     private var deckId: Long? = null
     private var started = false
     private var saveError: String? = null
+
+    /** Application context in the app's chosen language, for messages shown on the alarm screen. */
+    private val text get() = Lang.wrap(getApplication())
 
     fun start(ringing: AlarmService.Ringing, canShake: Boolean, wakeCode: String?) {
         if (started) return
@@ -269,7 +276,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                     AnkiDroid.answer(getApplication(), task.card, ease, System.currentTimeMillis() - task.shownAt)
                 }.isSuccess
             }
-            saveError = if (ok) null else "Couldn't save your last answer in AnkiDroid."
+            saveError = if (ok) null else text.getString(R.string.save_answer_failed)
             _state.update { it.copy(done = it.done + 1) }
             loadNext()
         }
@@ -294,13 +301,13 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             val ctx = getApplication<Application>()
             val result: Pair<AnkiDroid.DueCard?, String?> = withContext(Dispatchers.IO) {
                 when {
-                    !AnkiDroid.isInstalled(ctx) -> null to "AnkiDroid isn't installed, so solve this instead."
-                    !AnkiDroid.hasPermission(ctx) -> null to "Anki Alarm isn't allowed to read AnkiDroid yet, so solve this instead."
+                    !AnkiDroid.isInstalled(ctx) -> null to text.getString(R.string.fallback_not_installed)
+                    !AnkiDroid.hasPermission(ctx) -> null to text.getString(R.string.fallback_no_permission)
                     else -> try {
                         AnkiDroid.nextDueCard(ctx, deckId)?.let { it to null }
-                            ?: (null to "No cards are due right now, so solve this instead.")
+                            ?: (null to text.getString(R.string.fallback_none_due))
                     } catch (e: Exception) {
-                        null to "Couldn't load a card from AnkiDroid, so solve this instead."
+                        null to text.getString(R.string.fallback_error)
                     }
                 }
             }
@@ -334,6 +341,7 @@ private fun AlarmScreen(
     onSkipScan: () -> Unit,
     onSnooze: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scanning = state.wakeCode != null
     val shaking = !scanning && state.task != null && state.shakesLeft > 0
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -347,7 +355,7 @@ private fun AlarmScreen(
             }
             val remaining = (state.goal - state.done).coerceAtLeast(0)
             Text(
-                if (remaining == 0) "Done!" else "Review ${cardsText(remaining)} to stop the alarm",
+                if (remaining == 0) stringResource(R.string.all_done) else context.plural(R.plurals.review_to_stop, remaining),
                 style = MaterialTheme.typography.titleSmall,
             )
             LinearProgressIndicator(
@@ -377,14 +385,14 @@ private fun AlarmScreen(
                         onClick = onShowAnswer,
                         enabled = !state.loading,
                         modifier = Modifier.fillMaxWidth().height(64.dp),
-                    ) { Text("Show answer", style = MaterialTheme.typography.titleMedium) }
+                    ) { Text(stringResource(R.string.show_answer), style = MaterialTheme.typography.titleMedium) }
                 } else {
                     EaseButtons(task.card, enabled = !state.loading, onEase = onEase)
                 }
             }
             if (snoozeMinutes != null) {
                 TextButton(onClick = onSnooze, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Snooze $snoozeMinutes min")
+                    Text(stringResource(R.string.snooze_n, snoozeMinutes))
                 }
             }
         }
@@ -420,15 +428,15 @@ private fun ScanGate(wrongCode: Boolean, onScanned: (String) -> Unit, onSkip: ()
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Get up and scan your wake-up code", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.scan_prompt), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         ElevatedCard(Modifier.fillMaxWidth().weight(1f)) {
             BarcodeScanner(onCode = onScanned, modifier = Modifier.fillMaxSize())
         }
         if (wrongCode) {
-            Text("That's not your wake-up code.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.wrong_code), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
         }
         if (showSkip) {
-            TextButton(onClick = onSkip) { Text("Can't scan it? Skip this step") }
+            TextButton(onClick = onSkip) { Text(stringResource(R.string.skip_scan)) }
         }
     }
 }
@@ -449,10 +457,10 @@ private fun ShakeGate(left: Int, total: Int, onShake: () -> Unit, onSkip: () -> 
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("📳", style = MaterialTheme.typography.displayLarge)
-        Text("Shake your phone!", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.shake_prompt), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
         Text("$left", style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
         Text(
-            if (left == 1) "more shake to see the card" else "more shakes to see the card",
+            LocalContext.current.plural(R.plurals.more_shakes, left),
             style = MaterialTheme.typography.bodyLarge,
         )
         LinearProgressIndicator(
@@ -460,7 +468,7 @@ private fun ShakeGate(left: Int, total: Int, onShake: () -> Unit, onSkip: () -> 
             modifier = Modifier.fillMaxWidth(0.7f),
         )
         if (showSkip) {
-            TextButton(onClick = onSkip) { Text("Shaking not working? Show the card") }
+            TextButton(onClick = onSkip) { Text(stringResource(R.string.skip_shake)) }
         }
     }
 }
@@ -540,14 +548,18 @@ private fun Clock() {
 
 @Composable
 private fun EaseButtons(card: AnkiDroid.DueCard, enabled: Boolean, onEase: (Int) -> Unit) {
+    val again = stringResource(R.string.ease_again)
+    val hard = stringResource(R.string.ease_hard)
+    val good = stringResource(R.string.ease_good)
+    val easy = stringResource(R.string.ease_easy)
     val labels = when (card.buttonCount) {
-        2 -> listOf("Again", "Good")
-        3 -> listOf("Again", "Good", "Easy")
-        else -> listOf("Again", "Hard", "Good", "Easy")
+        2 -> listOf(again, good)
+        3 -> listOf(again, good, easy)
+        else -> listOf(again, hard, good, easy)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         labels.forEachIndexed { i, label ->
-            val colors = if (label == "Again") {
+            val colors = if (i == 0) {
                 ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -590,14 +602,14 @@ private fun MathTask(task: Task.Math, onSubmit: (String) -> Boolean) {
                 input = v.filter { it.isDigit() }.take(6)
                 wrong = false
             },
-            label = { Text("Answer") },
+            label = { Text(stringResource(R.string.answer_label)) },
             isError = wrong,
-            supportingText = { if (wrong) Text("Not quite, try again") },
+            supportingText = { if (wrong) Text(stringResource(R.string.not_quite)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { submit() }),
         )
-        Button(onClick = { submit() }, enabled = input.isNotEmpty()) { Text("Check") }
+        Button(onClick = { submit() }, enabled = input.isNotEmpty()) { Text(stringResource(R.string.check)) }
     }
 }
 

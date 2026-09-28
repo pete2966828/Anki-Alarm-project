@@ -85,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,7 +100,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.format.TextStyle
-import java.util.Locale
 
 data class SetupStatus(
     val ankiInstalled: Boolean = true,
@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
         if (granted) {
             registeringCode = true
         } else {
-            Toast.makeText(this, "Allow camera access in the app's settings to scan a wake-up code.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.camera_needed), Toast.LENGTH_LONG).show()
             openAppSettings()
         }
     }
@@ -147,6 +147,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent { AnkiAlarmTheme { MainScreen() } }
     }
+
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Lang.wrap(newBase))
 
     override fun onResume() {
         super.onResume()
@@ -174,8 +176,8 @@ class MainActivity : ComponentActivity() {
         AlarmScheduler.schedule(this, alarm)
         alarms = AlarmStore.all(this)
         if (announce && alarm.enabled) {
-            val until = formatUntil(AlarmScheduler.nextTrigger(alarm))
-            Toast.makeText(this, "Alarm set for $until from now", Toast.LENGTH_SHORT).show()
+            val until = formatUntil(this, AlarmScheduler.nextTrigger(alarm))
+            Toast.makeText(this, getString(R.string.alarm_set_in, until), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -227,10 +229,10 @@ class MainActivity : ComponentActivity() {
             return
         }
         Scaffold(
-            topBar = { TopAppBar(title = { Text("Anki Alarm") }) },
+            topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
             floatingActionButton = {
                 FloatingActionButton(onClick = { editing = Alarm(id = AlarmStore.newId(this), hour = 7, minute = 0) }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add alarm")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_alarm))
                 }
             },
         ) { padding ->
@@ -243,7 +245,7 @@ class MainActivity : ComponentActivity() {
                 if (alarms.isEmpty()) {
                     item {
                         Text(
-                            "No alarms yet. Tap + to add one.",
+                            stringResource(R.string.no_alarms),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 24.dp),
@@ -270,18 +272,18 @@ class MainActivity : ComponentActivity() {
         val s = setup
         val items = buildList {
             if (!s.ankiInstalled) {
-                add(SetupItem("Install AnkiDroid", "Your cards come from AnkiDroid. Until it's installed, alarms ask math questions instead.", "Install") { AnkiDroid.openStore(this@MainActivity) })
+                add(SetupItem(getString(R.string.setup_install_anki_title), getString(R.string.setup_install_anki_detail), getString(R.string.action_install)) { AnkiDroid.openStore(this@MainActivity) })
             } else if (!s.ankiPermission) {
-                add(SetupItem("Allow access to AnkiDroid", "Needed to show your due cards and save your answers.", "Allow") { requestPermission(AnkiDroid.PERMISSION) })
+                add(SetupItem(getString(R.string.setup_anki_access_title), getString(R.string.setup_anki_access_detail), getString(R.string.action_allow)) { requestPermission(AnkiDroid.PERMISSION) })
             }
             if (!s.notifications && Build.VERSION.SDK_INT >= 33) {
-                add(SetupItem("Allow notifications", "The ringing alarm is shown as a notification.", "Allow") { requestPermission(Manifest.permission.POST_NOTIFICATIONS) })
+                add(SetupItem(getString(R.string.setup_notifications_title), getString(R.string.setup_notifications_detail), getString(R.string.action_allow)) { requestPermission(Manifest.permission.POST_NOTIFICATIONS) })
             }
             if (!s.exactAlarms && Build.VERSION.SDK_INT >= 31) {
-                add(SetupItem("Allow alarms & reminders", "Lets the alarm ring at the exact minute.", "Open") { openSettings(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM) })
+                add(SetupItem(getString(R.string.setup_exact_title), getString(R.string.setup_exact_detail), getString(R.string.action_open)) { openSettings(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM) })
             }
             if (!s.fullScreen && Build.VERSION.SDK_INT >= 34) {
-                add(SetupItem("Allow full-screen alarms", "Lets your cards appear over the lock screen.", "Open") { openSettings(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT) })
+                add(SetupItem(getString(R.string.setup_fullscreen_title), getString(R.string.setup_fullscreen_detail), getString(R.string.action_open)) { openSettings(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT) })
             }
         }
         if (items.isEmpty()) return
@@ -290,7 +292,7 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Finish setup", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.finish_setup), style = MaterialTheme.typography.titleMedium)
                 items.forEach { item ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -318,11 +320,11 @@ class MainActivity : ComponentActivity() {
                         color = if (alarm.enabled) MaterialTheme.colorScheme.onSurface else muted,
                     )
                     Text(
-                        listOfNotNull(alarm.label.ifBlank { null }, describeDays(alarm.days)).joinToString(" · "),
+                        listOfNotNull(alarm.label.ifBlank { null }, describeDays(this@MainActivity, alarm.days)).joinToString(" · "),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        "${cardsText(alarm.cardsToReview)} · ${alarm.deckName ?: "current deck"}",
+                        "${cardsText(this@MainActivity, alarm.cardsToReview)} · ${alarm.deckName ?: stringResource(R.string.current_deck_short)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = muted,
                         maxLines = 1,
@@ -348,34 +350,32 @@ class MainActivity : ComponentActivity() {
                 adding = false
                 count = CardMedia.count(this@MainActivity)
                 val message = when (added) {
-                    null -> "Couldn't read that file. Pick an .apkg or .colpkg exported from Anki."
-                    0 -> "No pictures in that file. When exporting, tick \"Include media\"."
-                    else -> "Added $added pictures"
+                    null -> getString(R.string.pictures_read_error)
+                    0 -> getString(R.string.pictures_none)
+                    else -> plural(R.plurals.pictures_added, added)
                 }
                 Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
             }
         }
         ElevatedCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Card pictures", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.pictures_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text(
-                    "AnkiDroid doesn't let other apps see your card pictures. To show them, export your deck in AnkiDroid " +
-                        "(deck menu \u2192 Export \u2192 Anki deck package, with \"Include media\" ticked) and add the file here. " +
-                        "Add it again after you add new pictures to your cards.",
+                    stringResource(R.string.pictures_detail),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (count > 0) {
-                    Text("$count pictures saved", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(plural(R.plurals.pictures_saved, count), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !adding) {
-                        Text(if (adding) "Adding\u2026" else "Add deck file")
+                        Text(stringResource(if (adding) R.string.adding else R.string.pictures_add))
                     }
                     if (count > 0 && !adding) {
                         TextButton(onClick = {
                             CardMedia.clear(this@MainActivity)
                             count = 0
-                        }) { Text("Remove all") }
+                        }) { Text(stringResource(R.string.remove_all)) }
                     }
                 }
             }
@@ -391,23 +391,22 @@ class MainActivity : ComponentActivity() {
         val code = wakeCode
         ElevatedCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Wake-up code", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.wake_code_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text(
                     if (code == null) {
-                        "Scan any barcode or QR code: a toothpaste tube, a printed QR on the bathroom mirror, a coffee jar. " +
-                            "Alarms with \"Scan your wake-up code first\" won't show cards until you get up and scan it."
+                        stringResource(R.string.wake_code_empty)
                     } else {
-                        "Saved (${code.take(32)}${if (code.length > 32) "…" else ""}). Alarms with \"Scan your wake-up code first\" need it."
+                        stringResource(R.string.wake_code_saved, code.take(32) + if (code.length > 32) "…" else "")
                     },
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { startRegisteringCode() }) { Text(if (code == null) "Scan a code" else "Change code") }
+                    FilledTonalButton(onClick = { startRegisteringCode() }) { Text(stringResource(if (code == null) R.string.wake_code_scan else R.string.wake_code_change)) }
                     if (code != null) {
                         TextButton(onClick = {
                             AlarmStore.setWakeCode(this@MainActivity, null)
                             wakeCode = null
-                        }) { Text("Remove") }
+                        }) { Text(stringResource(R.string.action_remove)) }
                     }
                 }
             }
@@ -419,7 +418,7 @@ class MainActivity : ComponentActivity() {
                     AlarmStore.setWakeCode(this@MainActivity, it)
                     wakeCode = it
                     registeringCode = false
-                    Toast.makeText(this@MainActivity, "Wake-up code saved", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, getString(R.string.wake_code_saved_toast), Toast.LENGTH_SHORT).show()
                 },
             )
         }
@@ -428,22 +427,58 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun SettingsCard() {
         ElevatedCard(Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Sync after waking up", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    Text(
-                        "When you're done, unlock your phone and AnkiDroid syncs your reviews to AnkiWeb, and from there to Anki on your computer.",
-                        style = MaterialTheme.typography.bodySmall,
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.sync_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(
+                            stringResource(R.string.sync_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = syncAfter,
+                        onCheckedChange = {
+                            syncAfter = it
+                            AlarmStore.setSyncAfterAlarm(this@MainActivity, it)
+                        },
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = syncAfter,
-                    onCheckedChange = {
-                        syncAfter = it
-                        AlarmStore.setSyncAfterAlarm(this@MainActivity, it)
-                    },
-                )
+                LanguagePicker()
+            }
+        }
+    }
+
+    @Composable
+    private fun LanguagePicker() {
+        val current = Lang.get(this)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.language_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Lang.CHOICES.forEach { tag ->
+                    FilterChip(
+                        selected = current == tag,
+                        onClick = {
+                            if (tag != current) {
+                                Lang.set(this@MainActivity, tag)
+                                // Rebuild the screen so every text switches to the new language.
+                                recreate()
+                            }
+                        },
+                        label = {
+                            Text(
+                                stringResource(
+                                    when (tag) {
+                                        "en" -> R.string.language_english
+                                        "th" -> R.string.language_thai
+                                        else -> R.string.language_system
+                                    },
+                                ),
+                            )
+                        },
+                    )
+                }
             }
         }
     }
@@ -470,7 +505,7 @@ private fun EditAlarmScreen(
     var days by remember { mutableStateOf(initial.days) }
     var label by remember { mutableStateOf(initial.label) }
     var cards by remember { mutableIntStateOf(initial.cardsToReview) }
-    var deck by remember { mutableStateOf(initial.deckId?.let { AnkiDroid.Deck(it, initial.deckName ?: "Deck $it") }) }
+    var deck by remember { mutableStateOf(initial.deckId?.let { AnkiDroid.Deck(it, initial.deckName ?: context.getString(R.string.deck_fallback, it.toString())) }) }
     var snooze by remember { mutableIntStateOf(initial.snoozeMinutes) }
     var soundUri by remember { mutableStateOf(initial.soundUri) }
     var soundName by remember { mutableStateOf(initial.soundName) }
@@ -499,13 +534,13 @@ private fun EditAlarmScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNew) "New alarm" else "Edit alarm") },
+                title = { Text(stringResource(if (isNew) R.string.new_alarm else R.string.edit_alarm)) },
                 navigationIcon = {
-                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, contentDescription = "Cancel") }
+                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel)) }
                 },
                 actions = {
                     if (!isNew) {
-                        IconButton(onClick = { onDelete(initial) }) { Icon(Icons.Default.Delete, contentDescription = "Delete") }
+                        IconButton(onClick = { onDelete(initial) }) { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete)) }
                     }
                 },
             )
@@ -515,8 +550,8 @@ private fun EditAlarmScreen(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                OutlinedButton(onClick = { onTest(build()) }, modifier = Modifier.weight(1f)) { Text("Save & test") }
-                Button(onClick = { onSave(build()) }, modifier = Modifier.weight(1f)) { Text("Save") }
+                OutlinedButton(onClick = { onTest(build()) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.save_and_test)) }
+                Button(onClick = { onSave(build()) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.save)) }
             }
         },
     ) { padding ->
@@ -525,73 +560,73 @@ private fun EditAlarmScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TimePicker(state = time) }
-            Section("Repeat") { DayPicker(days) { days = it } }
+            Section(stringResource(R.string.section_repeat)) { DayPicker(days) { days = it } }
             OutlinedTextField(
                 value = label,
                 onValueChange = { label = it },
-                label = { Text("Label (optional)") },
+                label = { Text(stringResource(R.string.label_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Section("Cards to review before it stops") {
+            Section(stringResource(R.string.section_cards)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     FilledTonalButton(onClick = { cards = (cards - 1).coerceAtLeast(1) }) { Text("−") }
                     Text("$cards", style = MaterialTheme.typography.headlineSmall)
                     FilledTonalButton(onClick = { cards = (cards + 1).coerceAtMost(30) }) { Text("+") }
                 }
             }
-            Section("Get out of bed") {
+            Section(stringResource(R.string.section_get_up)) {
                 SwitchRow(
-                    title = "Scan your wake-up code first",
+                    title = stringResource(R.string.scan_first_title),
                     detail = if (hasWakeCode) {
-                        "No cards until you get up and scan the code you saved."
+                        stringResource(R.string.scan_first_detail)
                     } else {
-                        "Save a wake-up code on the main screen to use this."
+                        stringResource(R.string.scan_first_needs_code)
                     },
                     checked = requireScan && hasWakeCode,
                     enabled = hasWakeCode,
                     onChange = { requireScan = it },
                 )
             }
-            Section("Volume") {
+            Section(stringResource(R.string.section_volume)) {
                 SwitchRow(
-                    title = "Gentle start",
-                    detail = "Starts quietly and reaches full volume after 30 seconds.",
+                    title = stringResource(R.string.gentle_title),
+                    detail = stringResource(R.string.gentle_detail),
                     checked = gentleStart,
                     onChange = { gentleStart = it },
                 )
                 Text(
-                    "While you're answering, the alarm drops to 30%. Stop touching the screen for 30 seconds and it's back at full volume.",
+                    stringResource(R.string.volume_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Section("Shakes before each card") {
+            Section(stringResource(R.string.section_shakes)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     FilledTonalButton(onClick = { shakes = (shakes - SHAKE_STEP).coerceAtLeast(0) }) { Text("−") }
-                    Text(if (shakes == 0) "Off" else "$shakes", style = MaterialTheme.typography.headlineSmall)
+                    Text(if (shakes == 0) stringResource(R.string.off) else "$shakes", style = MaterialTheme.typography.headlineSmall)
                     FilledTonalButton(onClick = { shakes = (shakes + SHAKE_STEP).coerceAtMost(50) }) { Text("+") }
                 }
                 Text(
-                    "Each card stays hidden until you shake your phone this many times, so you can't answer half asleep.",
+                    stringResource(R.string.shakes_detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Section("Deck") { DeckPicker(deck, decks) { deck = it } }
-            Section("Sound") {
+            Section(stringResource(R.string.section_deck)) { DeckPicker(deck, decks) { deck = it } }
+            Section(stringResource(R.string.section_sound)) {
                 SoundPicker(soundUri, soundName) { uri, name ->
                     soundUri = uri
                     soundName = name
                 }
             }
-            Section("Snooze") {
+            Section(stringResource(R.string.section_snooze)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0, 5, 10).forEach { m ->
                         FilterChip(
                             selected = snooze == m,
                             onClick = { snooze = m },
-                            label = { Text(if (m == 0) "Off" else "$m min") },
+                            label = { Text(if (m == 0) stringResource(R.string.off) else stringResource(R.string.minutes_short, m)) },
                         )
                     }
                 }
@@ -610,9 +645,9 @@ private fun AboutFooter() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("Made by Pete", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.made_by), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
         Text(
-            "Free for anyone to use, for any exam. Not for resale.",
+            stringResource(R.string.free_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -626,7 +661,7 @@ private fun RegisterCodeDialog(onDismiss: () -> Unit, onCode: (String) -> Unit) 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.8f), shape = MaterialTheme.shapes.extraLarge) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Point the camera at your code", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.point_camera), style = MaterialTheme.typography.titleMedium)
                 BarcodeScanner(
                     onCode = {
                         if (!done) {
@@ -636,7 +671,7 @@ private fun RegisterCodeDialog(onDismiss: () -> Unit, onCode: (String) -> Unit) 
                     },
                     modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)),
                 )
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Cancel") }
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.action_cancel)) }
             }
         }
     }
@@ -668,7 +703,7 @@ private fun SoundPicker(uri: String?, name: String?, onChange: (uri: String?, na
     val phoneSoundPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val picked = result.data?.let { IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java) }
         if (result.resultCode == Activity.RESULT_OK && picked != null) {
-            onChange(picked.toString(), Sounds.ringtoneTitle(context, picked) ?: "Phone sound")
+            onChange(picked.toString(), Sounds.ringtoneTitle(context, picked) ?: context.getString(R.string.phone_sound))
             open = false
         }
     }
@@ -679,7 +714,7 @@ private fun SoundPicker(uri: String?, name: String?, onChange: (uri: String?, na
             val sound = withContext(Dispatchers.IO) { Sounds.add(context, source) }
             adding = false
             if (sound == null) {
-                Toast.makeText(context, "Couldn't use that file. Pick an audio file (MP3, M4A, OGG, WAV…) under 30 MB.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.sound_file_error), Toast.LENGTH_LONG).show()
             } else {
                 imported = Sounds.imported(context)
                 onChange(sound.uri, sound.name)
@@ -690,23 +725,23 @@ private fun SoundPicker(uri: String?, name: String?, onChange: (uri: String?, na
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.weight(1f)) {
-            Text(name ?: "Default alarm sound", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(name ?: stringResource(R.string.default_sound), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
         }
         FilledTonalButton(onClick = { if (preview.playing) preview.stop() else preview.play(uri) }) {
-            Text(if (preview.playing) "Stop" else "Play")
+            Text(stringResource(if (preview.playing) R.string.stop else R.string.play))
         }
     }
 
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text("Alarm sound") },
+            title = { Text(stringResource(R.string.alarm_sound_title)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    SoundOption("Default alarm sound", selected = uri == null) { onChange(null, null) }
+                    SoundOption(stringResource(R.string.default_sound), selected = uri == null) { onChange(null, null) }
                     if (uri != null && !Sounds.isImported(context, uri)) {
-                        SoundOption(name ?: "Phone sound", selected = true) {}
+                        SoundOption(name ?: stringResource(R.string.phone_sound), selected = true) {}
                     }
                     imported.forEach { sound ->
                         SoundOption(
@@ -728,14 +763,14 @@ private fun SoundPicker(uri: String?, name: String?, onChange: (uri: String?, na
                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     TextButton(onClick = {
                         runCatching { phoneSoundPicker.launch(phoneSoundIntent(context, uri)) }
-                            .onFailure { Toast.makeText(context, "This phone has no sound picker.", Toast.LENGTH_SHORT).show() }
-                    }) { Text("Choose a phone sound…") }
+                            .onFailure { Toast.makeText(context, context.getString(R.string.no_sound_picker), Toast.LENGTH_SHORT).show() }
+                    }) { Text(stringResource(R.string.choose_phone_sound)) }
                     TextButton(onClick = { filePicker.launch(arrayOf("audio/*")) }, enabled = !adding) {
-                        Text(if (adding) "Adding…" else "Add from file…")
+                        Text(stringResource(if (adding) R.string.adding else R.string.add_from_file))
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text("Done") } },
+            confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.done)) } },
         )
     }
 }
@@ -744,7 +779,7 @@ private fun phoneSoundIntent(context: Context, current: String?): Intent {
     val existing = current?.takeUnless { Sounds.isImported(context, it) }?.let(Uri::parse)
     return Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
         .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-        .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Alarm sound")
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, context.getString(R.string.alarm_sound_title))
         .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, false)
         .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
         .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existing)
@@ -759,7 +794,7 @@ private fun SoundOption(title: String, selected: Boolean, onDelete: (() -> Unit)
         RadioButton(selected = selected, onClick = onClick)
         Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         if (onDelete != null) {
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Remove $title") }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove_item, title)) }
         }
     }
 }
@@ -786,7 +821,7 @@ private fun DayPicker(days: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) 
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    day.getDisplayName(TextStyle.NARROW, LocalContext.current.locale()),
                     color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium,
                 )
@@ -794,7 +829,7 @@ private fun DayPicker(days: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) 
         }
     }
     Text(
-        if (days.isEmpty()) "Once, then it turns itself off" else describeDays(days),
+        if (days.isEmpty()) stringResource(R.string.once_then_off) else describeDays(LocalContext.current, days),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -806,7 +841,7 @@ private fun DeckPicker(selected: AnkiDroid.Deck?, decks: List<AnkiDroid.Deck>, o
     Box {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
             Text(
-                selected?.name ?: "Current deck in AnkiDroid",
+                selected?.name ?: stringResource(R.string.current_deck),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -815,7 +850,7 @@ private fun DeckPicker(selected: AnkiDroid.Deck?, decks: List<AnkiDroid.Deck>, o
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text("Current deck in AnkiDroid") },
+                text = { Text(stringResource(R.string.current_deck)) },
                 onClick = {
                     onSelect(null)
                     open = false
@@ -834,7 +869,7 @@ private fun DeckPicker(selected: AnkiDroid.Deck?, decks: List<AnkiDroid.Deck>, o
     }
     if (decks.isEmpty()) {
         Text(
-            "Allow access to AnkiDroid on the main screen to pick a specific deck.",
+            stringResource(R.string.deck_needs_access),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
