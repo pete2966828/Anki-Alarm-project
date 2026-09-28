@@ -14,8 +14,11 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -35,6 +38,26 @@ class AlarmService : Service() {
     private var player: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var startedAt = 0L
+    private var gentleStart = false
+    private val volumeTicker = object : Runnable {
+        override fun run() {
+            player?.let { p -> targetVolume().let { v -> runCatching { p.setVolume(v, v) } } }
+            handler.postDelayed(this, VOLUME_TICK_MS)
+        }
+    }
+
+    /**
+     * Gentle start rises from quiet to full over the first 30 s. While you're answering it drops
+     * to 30% so you can think; stop touching the screen for 30 s and it's back at full volume.
+     */
+    private fun targetVolume(): Float {
+        val now = SystemClock.elapsedRealtime()
+        val ramp = if (gentleStart) (MIN_VOLUME + (now - startedAt).toFloat() / RAMP_MS).coerceAtMost(1f) else 1f
+        val answering = now - lastActivity.value < IDLE_BEFORE_LOUD_MS
+        return if (answering) minOf(ramp, ANSWERING_VOLUME) else ramp
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -60,7 +83,11 @@ class AlarmService : Service() {
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AnkiAlarm:ringing")
             .apply { acquire(60 * 60 * 1000L) }
+        startedAt = SystemClock.elapsedRealtime()
+        gentleStart = alarm.gentleStart
+        lastActivity.value = 0L
         startSound(alarm)
+        handler.post(volumeTicker)
         startVibration()
         // Works when the phone is in use; otherwise the full-screen notification opens the cards.
         runCatching { startActivity(alarmActivityIntent(this)) }
@@ -89,6 +116,7 @@ class AlarmService : Service() {
                 p.setAudioAttributes(Sounds.ALARM_AUDIO)
                 p.setDataSource(this, uri)
                 p.isLooping = true
+                targetVolume().let { v -> p.setVolume(v, v) }
                 p.prepare()
                 p.start()
                 player = p
@@ -128,6 +156,7 @@ class AlarmService : Service() {
     }
 
     private fun stopRinging() {
+        handler.removeCallbacks(volumeTicker)
         player?.let {
             runCatching { it.stop() }
             it.release()
@@ -173,7 +202,21 @@ class AlarmService : Service() {
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 42
 
+        private const val VOLUME_TICK_MS = 250L
+        private const val RAMP_MS = 30_000f
+        private const val MIN_VOLUME = 0.05f
+        private const val ANSWERING_VOLUME = 0.3f
+        private const val IDLE_BEFORE_LOUD_MS = 30_000L
+
         private val _ringing = MutableStateFlow<Ringing?>(null)
+
+        /** When the user last touched the alarm screen or shook the phone (elapsedRealtime). */
+        private val lastActivity = MutableStateFlow(0L)
+
+        /** Tell the ringing alarm the user is busy answering, so it can quieten down for a while. */
+        fun noteActivity() {
+            lastActivity.value = SystemClock.elapsedRealtime()
+        }
 
         /** The alarm that is sounding right now, or null. */
         val ringing: StateFlow<Ringing?> = _ringing.asStateFlow()

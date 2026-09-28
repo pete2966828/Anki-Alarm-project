@@ -21,6 +21,12 @@ data class Alarm(
     /** Null means the phone's default alarm sound. */
     val soundUri: String? = null,
     val soundName: String? = null,
+    /** Shakes needed before each card is revealed; 0 turns it off. */
+    val shakesPerCard: Int = 0,
+    /** Cards stay locked until the saved wake-up code is scanned. */
+    val requireScan: Boolean = false,
+    /** Volume rises from quiet to full over the first 30 seconds. */
+    val gentleStart: Boolean = true,
 ) {
     val isRepeating: Boolean get() = days.isNotEmpty()
 
@@ -37,6 +43,9 @@ data class Alarm(
         put("snoozeMinutes", snoozeMinutes)
         if (soundUri != null) put("soundUri", soundUri)
         if (soundName != null) put("soundName", soundName)
+        put("shakesPerCard", shakesPerCard)
+        put("requireScan", requireScan)
+        put("gentleStart", gentleStart)
     }
 
     companion object {
@@ -55,6 +64,9 @@ data class Alarm(
                 snoozeMinutes = o.optInt("snoozeMinutes", 0),
                 soundUri = o.optString("soundUri").ifEmpty { null },
                 soundName = o.optString("soundName").ifEmpty { null },
+                shakesPerCard = o.optInt("shakesPerCard", 0),
+                requireScan = o.optBoolean("requireScan", false),
+                gentleStart = o.optBoolean("gentleStart", true),
             )
         }
     }

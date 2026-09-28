@@ -7,6 +7,7 @@ object AlarmStore {
     private const val PREFS = "anki_alarm"
     private const val KEY_ALARMS = "alarms"
     private const val KEY_SYNC_AFTER = "sync_after_alarm"
+    private const val KEY_WAKE_CODE = "wake_code"
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -26,6 +27,11 @@ object AlarmStore {
     fun syncAfterAlarm(c: Context): Boolean = prefs(c).getBoolean(KEY_SYNC_AFTER, true)
 
     fun setSyncAfterAlarm(c: Context, value: Boolean) = prefs(c).edit().putBoolean(KEY_SYNC_AFTER, value).apply()
+
+    /** The barcode/QR contents you scan to unlock the cards, or null if none is saved. */
+    fun wakeCode(c: Context): String? = prefs(c).getString(KEY_WAKE_CODE, null)
+
+    fun setWakeCode(c: Context, value: String?) = prefs(c).edit().putString(KEY_WAKE_CODE, value).apply()
 
     private fun write(c: Context, alarms: List<Alarm>) {
         val array = JSONArray()
