@@ -15,7 +15,12 @@ Anki on your computer.
 The back button doesn't close the alarm screen. If AnkiDroid isn't installed, isn't allowed, or has no
 cards due, you get simple math problems instead, so you can always turn the alarm off.
 
-Each alarm has its own time, repeat days, label, deck (or "current deck in AnkiDroid"), number of cards, and snooze (off / 5 / 10 min, up to 3 times).
+Each alarm has its own time, repeat days, label, deck (or "current deck in AnkiDroid"), number of cards, sound, and snooze (off / 5 / 10 min, up to 3 times).
+
+**Sound:** use the default alarm sound, pick one of the phone's built-in sounds, or tap **Add from file…** and choose any audio file
+(MP3, M4A, OGG, WAV… up to 30 MB). Added files are copied into the app, so the alarm keeps working if you move or delete the original.
+They stay in the list for your other alarms. Tap **Play** to preview a sound at alarm volume. If a sound can't be played when the alarm rings,
+the default alarm sound plays instead.
 
 ## Install on your phone
 

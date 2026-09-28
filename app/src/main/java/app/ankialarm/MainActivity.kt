@@ -1,10 +1,12 @@
 package app.ankialarm
 
 import android.Manifest
+import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +15,7 @@ import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -51,22 +55,28 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +86,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -350,6 +361,8 @@ private fun EditAlarmScreen(
     var cards by remember { mutableIntStateOf(initial.cardsToReview) }
     var deck by remember { mutableStateOf(initial.deckId?.let { AnkiDroid.Deck(it, initial.deckName ?: "Deck $it") }) }
     var snooze by remember { mutableIntStateOf(initial.snoozeMinutes) }
+    var soundUri by remember { mutableStateOf(initial.soundUri) }
+    var soundName by remember { mutableStateOf(initial.soundName) }
 
     fun build() = initial.copy(
         hour = time.hour,
@@ -360,6 +373,8 @@ private fun EditAlarmScreen(
         deckId = deck?.id,
         deckName = deck?.name,
         snoozeMinutes = snooze,
+        soundUri = soundUri,
+        soundName = soundName,
         enabled = true,
     )
 
@@ -408,6 +423,12 @@ private fun EditAlarmScreen(
                 }
             }
             Section("Deck") { DeckPicker(deck, decks) { deck = it } }
+            Section("Sound") {
+                SoundPicker(soundUri, soundName) { uri, name ->
+                    soundUri = uri
+                    soundName = name
+                }
+            }
             Section("Snooze") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0, 5, 10).forEach { m ->
@@ -420,6 +441,116 @@ private fun EditAlarmScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun SoundPicker(uri: String?, name: String?, onChange: (uri: String?, name: String?) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val preview = remember { SoundPreview(context) }
+    DisposableEffect(Unit) { onDispose { preview.stop() } }
+    LaunchedEffect(uri) { preview.stop() }
+    var open by remember { mutableStateOf(false) }
+    var imported by remember { mutableStateOf(Sounds.imported(context)) }
+    var adding by remember { mutableStateOf(false) }
+
+    val phoneSoundPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val picked = result.data?.let { IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java) }
+        if (result.resultCode == Activity.RESULT_OK && picked != null) {
+            onChange(picked.toString(), Sounds.ringtoneTitle(context, picked) ?: "Phone sound")
+            open = false
+        }
+    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        adding = true
+        scope.launch {
+            val sound = withContext(Dispatchers.IO) { Sounds.add(context, source) }
+            adding = false
+            if (sound == null) {
+                Toast.makeText(context, "Couldn't use that file. Pick an audio file (MP3, M4A, OGG, WAV…) under 30 MB.", Toast.LENGTH_LONG).show()
+            } else {
+                imported = Sounds.imported(context)
+                onChange(sound.uri, sound.name)
+                open = false
+            }
+        }
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.weight(1f)) {
+            Text(name ?: "Default alarm sound", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        FilledTonalButton(onClick = { if (preview.playing) preview.stop() else preview.play(uri) }) {
+            Text(if (preview.playing) "Stop" else "Play")
+        }
+    }
+
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("Alarm sound") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    SoundOption("Default alarm sound", selected = uri == null) { onChange(null, null) }
+                    if (uri != null && !Sounds.isImported(context, uri)) {
+                        SoundOption(name ?: "Phone sound", selected = true) {}
+                    }
+                    imported.forEach { sound ->
+                        SoundOption(
+                            title = sound.name,
+                            selected = uri == sound.uri,
+                            onDelete = {
+                                preview.stop()
+                                Sounds.delete(context, sound)
+                                // Alarms that used this file go back to the default sound.
+                                AlarmStore.all(context).filter { it.soundUri == sound.uri }.forEach {
+                                    AlarmStore.save(context, it.copy(soundUri = null, soundName = null))
+                                }
+                                imported = Sounds.imported(context)
+                                if (uri == sound.uri) onChange(null, null)
+                            },
+                            onClick = { onChange(sound.uri, sound.name) },
+                        )
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    TextButton(onClick = {
+                        runCatching { phoneSoundPicker.launch(phoneSoundIntent(context, uri)) }
+                            .onFailure { Toast.makeText(context, "This phone has no sound picker.", Toast.LENGTH_SHORT).show() }
+                    }) { Text("Choose a phone sound…") }
+                    TextButton(onClick = { filePicker.launch(arrayOf("audio/*")) }, enabled = !adding) {
+                        Text(if (adding) "Adding…" else "Add from file…")
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Done") } },
+        )
+    }
+}
+
+private fun phoneSoundIntent(context: Context, current: String?): Intent {
+    val existing = current?.takeUnless { Sounds.isImported(context, it) }?.let(Uri::parse)
+    return Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Alarm sound")
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, false)
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+        .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existing)
+}
+
+@Composable
+private fun SoundOption(title: String, selected: Boolean, onDelete: (() -> Unit)? = null, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (onDelete != null) {
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Remove $title") }
         }
     }
 }

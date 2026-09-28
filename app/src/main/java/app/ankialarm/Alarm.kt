@@ -18,6 +18,9 @@ data class Alarm(
     val cardsToReview: Int = 3,
     /** 0 turns snooze off. */
     val snoozeMinutes: Int = 0,
+    /** Null means the phone's default alarm sound. */
+    val soundUri: String? = null,
+    val soundName: String? = null,
 ) {
     val isRepeating: Boolean get() = days.isNotEmpty()
 
@@ -32,6 +35,8 @@ data class Alarm(
         if (deckName != null) put("deckName", deckName)
         put("cardsToReview", cardsToReview)
         put("snoozeMinutes", snoozeMinutes)
+        if (soundUri != null) put("soundUri", soundUri)
+        if (soundName != null) put("soundName", soundName)
     }
 
     companion object {
@@ -48,6 +53,8 @@ data class Alarm(
                 deckName = o.optString("deckName").ifEmpty { null },
                 cardsToReview = o.optInt("cardsToReview", 3),
                 snoozeMinutes = o.optInt("snoozeMinutes", 0),
+                soundUri = o.optString("soundUri").ifEmpty { null },
+                soundName = o.optString("soundName").ifEmpty { null },
             )
         }
     }

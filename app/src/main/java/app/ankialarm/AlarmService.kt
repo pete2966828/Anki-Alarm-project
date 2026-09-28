@@ -12,6 +12,7 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -59,7 +60,7 @@ class AlarmService : Service() {
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AnkiAlarm:ringing")
             .apply { acquire(60 * 60 * 1000L) }
-        startSound()
+        startSound(alarm)
         startVibration()
         // Works when the phone is in use; otherwise the full-screen notification opens the cards.
         runCatching { startActivity(alarmActivityIntent(this)) }
@@ -72,9 +73,11 @@ class AlarmService : Service() {
         super.onDestroy()
     }
 
-    private fun startSound() {
+    private fun startSound(alarm: Alarm) {
         raiseAlarmVolumeIfMuted()
+        // The alarm's own sound first; if it's gone or unplayable, fall back to the phone's sounds.
         val candidates = listOfNotNull(
+            alarm.soundUri?.let(Uri::parse),
             RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
@@ -83,12 +86,7 @@ class AlarmService : Service() {
         for (uri in candidates) {
             val p = MediaPlayer()
             try {
-                p.setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                )
+                p.setAudioAttributes(Sounds.ALARM_AUDIO)
                 p.setDataSource(this, uri)
                 p.isLooping = true
                 p.prepare()
