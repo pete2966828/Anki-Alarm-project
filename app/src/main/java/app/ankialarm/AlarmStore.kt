@@ -8,6 +8,8 @@ object AlarmStore {
     private const val KEY_ALARMS = "alarms"
     private const val KEY_SYNC_AFTER = "sync_after_alarm"
     private const val KEY_WAKE_CODE = "wake_code"
+    private const val KEY_STRICT = "strict_mode"
+    private const val KEY_RINGING = "ringing_alarm"
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -32,6 +34,15 @@ object AlarmStore {
     fun wakeCode(c: Context): String? = prefs(c).getString(KEY_WAKE_CODE, null)
 
     fun setWakeCode(c: Context, value: String?) = prefs(c).edit().putString(KEY_WAKE_CODE, value).apply()
+
+    fun strictMode(c: Context): Boolean = prefs(c).getBoolean(KEY_STRICT, false)
+
+    fun setStrictMode(c: Context, value: Boolean) = prefs(c).edit().putBoolean(KEY_STRICT, value).apply()
+
+    /** The alarm that is ringing and not yet finished, so it can ring again after a restart. -1 if none. */
+    fun ringingAlarm(c: Context): Int = prefs(c).getInt(KEY_RINGING, -1)
+
+    fun setRingingAlarm(c: Context, id: Int) = prefs(c).edit().putInt(KEY_RINGING, id).commit()
 
     private fun write(c: Context, alarms: List<Alarm>) {
         val array = JSONArray()

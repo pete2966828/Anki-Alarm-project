@@ -133,4 +133,11 @@
         <item quantity="one">Added %d picture</item>
         <item quantity="other">Added %d pictures</item>
     </plurals>
+    <string name="strict_title">Strict mode while ringing</string>
+    <string name="strict_detail">While the alarm rings: pressing the power button turns the screen straight back on, the volume buttons do nothing, and if the phone is restarted the alarm rings again. Phone calls and emergency calls always work. \"Save &amp; test\" never uses strict mode.</string>
+    <string name="strict_needs_accessibility">To also close the power-off menu and bring the alarm back if you leave it, turn on Anki Alarm in Accessibility settings.</string>
+    <string name="strict_restricted_hint">If the switch there is greyed out: Settings → Apps → Anki Alarm → ⋮ → Allow restricted settings, then try again.</string>
+    <string name="strict_accessibility_on">Power-off menu and leave protection is on.</string>
+    <string name="action_open_accessibility">Open Accessibility settings</string>
+    <string name="strict_service_description">Used by Anki Alarm\'s strict mode, only while an alarm is ringing: closes the power-off menu and brings the alarm back if you leave it. It does nothing at other times and doesn\'t read what\'s on your screen.</string>
 </resources>

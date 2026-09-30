@@ -31,8 +31,11 @@ object AlarmScheduler {
         set(c, at, fireIntent(c, alarm.id, 0, alarm.id))
     }
 
-    fun scheduleSnooze(c: Context, alarmId: Int, minutes: Int, snoozeCount: Int) {
-        val at = System.currentTimeMillis() + minutes * 60_000L
+    fun scheduleSnooze(c: Context, alarmId: Int, minutes: Int, snoozeCount: Int) =
+        scheduleRing(c, alarmId, System.currentTimeMillis() + minutes * 60_000L, snoozeCount)
+
+    /** A one-off extra ring (snooze, or ringing again after a restart). snoozeCount > 0 leaves the regular schedule alone. */
+    fun scheduleRing(c: Context, alarmId: Int, at: Long, snoozeCount: Int) {
         set(c, at, fireIntent(c, alarmId, snoozeCount, alarmId + SNOOZE_REQUEST_OFFSET))
     }
 

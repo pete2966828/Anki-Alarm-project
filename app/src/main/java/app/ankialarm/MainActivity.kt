@@ -128,6 +128,8 @@ class MainActivity : ComponentActivity() {
     private var decks by mutableStateOf(emptyList<AnkiDroid.Deck>())
     private var setup by mutableStateOf(SetupStatus())
     private var syncAfter by mutableStateOf(true)
+    private var strictMode by mutableStateOf(false)
+    private var strictServiceOn by mutableStateOf(false)
     private val askedPermissions = mutableSetOf<String>()
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { refresh() }
@@ -160,6 +162,8 @@ class MainActivity : ComponentActivity() {
         setup = SetupStatus.check(this)
         syncAfter = AlarmStore.syncAfterAlarm(this)
         wakeCode = AlarmStore.wakeCode(this)
+        strictMode = AlarmStore.strictMode(this)
+        strictServiceOn = StrictModeService.isEnabled(this)
         lifecycleScope.launch {
             decks = withContext(Dispatchers.IO) {
                 if (AnkiDroid.isAvailable(this@MainActivity)) {
@@ -261,6 +265,7 @@ class MainActivity : ComponentActivity() {
                 }
                 item { CardPicturesCard() }
                 item { WakeCodeCard() }
+                item { StrictModeCard() }
                 item { SettingsCard() }
                 item { AboutFooter() }
             }
@@ -421,6 +426,49 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this@MainActivity, getString(R.string.wake_code_saved_toast), Toast.LENGTH_SHORT).show()
                 },
             )
+        }
+    }
+
+    @Composable
+    private fun StrictModeCard() {
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.strict_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = strictMode,
+                        onCheckedChange = {
+                            strictMode = it
+                            AlarmStore.setStrictMode(this@MainActivity, it)
+                        },
+                    )
+                }
+                Text(stringResource(R.string.strict_detail), style = MaterialTheme.typography.bodySmall)
+                if (strictMode) {
+                    if (strictServiceOn) {
+                        Text(
+                            stringResource(R.string.strict_accessibility_on),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.strict_needs_accessibility), style = MaterialTheme.typography.bodySmall)
+                        FilledTonalButton(onClick = { runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } }) {
+                            Text(stringResource(R.string.action_open_accessibility))
+                        }
+                        Text(
+                            stringResource(R.string.strict_restricted_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 

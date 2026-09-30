@@ -30,6 +30,13 @@ without internet. If scanning isn't possible after 3 minutes, a "Can't scan it?"
 **Volume:** with **Gentle start**, the alarm begins quietly and reaches full volume after 30 seconds. While you're answering
 (touching the screen, typing, shaking), it drops to 30% so you can think. Stop for 30 seconds and it's back at full volume.
 
+**Strict mode while ringing** (main screen, off by default): the power button turns the screen straight back on,
+the volume buttons do nothing, and an alarm interrupted by a restart rings again once the phone is back on.
+If you also turn on Anki Alarm under Settings → Accessibility, the power-off menu closes by itself and leaving the alarm brings
+it back. On Android 13+, if that switch is greyed out, first go to Settings → Apps → Anki Alarm → ⋮ → Allow restricted settings.
+Phone and emergency calls always work, and **Save & test** never uses strict mode. A forced restart (holding power + volume)
+can't be blocked by any app, but the alarm rings again afterwards.
+
 **Sound:** use the default alarm sound, pick one of the phone's built-in sounds, or tap **Add from file…** and choose any audio file
 (MP3, M4A, OGG, WAV… up to 30 MB). Added files are copied into the app, so the alarm keeps working if you move or delete the original.
 They stay in the list for your other alarms. Tap **Play** to preview a sound at alarm volume. If a sound can't be played when the alarm rings,

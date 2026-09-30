@@ -10,6 +10,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.webkit.WebView
@@ -139,6 +140,15 @@ class AlarmActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Lang.wrap(newBase))
+
+    /** Strict mode: the volume buttons can't turn the alarm down. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val volumeKey = keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_MUTE
+        val ringing = AlarmService.ringing.value
+        if (volumeKey && ringing != null && !ringing.test && AlarmStore.strictMode(this)) return true
+        return super.onKeyDown(keyCode, event)
+    }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         AlarmService.noteActivity()

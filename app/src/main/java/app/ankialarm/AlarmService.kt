@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -41,9 +43,13 @@ class AlarmService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var startedAt = 0L
     private var gentleStart = false
+    private var strict = false
+    private var screenOffReceiver: BroadcastReceiver? = null
     private val volumeTicker = object : Runnable {
         override fun run() {
             player?.let { p -> targetVolume().let { v -> runCatching { p.setVolume(v, v) } } }
+            // Strict mode: turning the alarm volume down to zero doesn't silence it.
+            if (strict) raiseAlarmVolumeIfMuted()
             handler.postDelayed(this, VOLUME_TICK_MS)
         }
     }
@@ -87,6 +93,11 @@ class AlarmService : Service() {
             .apply { acquire(60 * 60 * 1000L) }
         startedAt = SystemClock.elapsedRealtime()
         gentleStart = alarm.gentleStart
+        val test = intent.getBooleanExtra(EXTRA_TEST, false)
+        strict = !test && AlarmStore.strictMode(this)
+        // Remembered until the cards are done, so strict mode can ring again after a restart.
+        if (!test) AlarmStore.setRingingAlarm(this, alarm.id)
+        if (strict) watchScreenOff()
         lastActivity.value = 0L
         startSound(alarm)
         handler.post(volumeTicker)
@@ -98,8 +109,27 @@ class AlarmService : Service() {
 
     override fun onDestroy() {
         stopRinging()
+        screenOffReceiver?.let { runCatching { unregisterReceiver(it) } }
+        screenOffReceiver = null
+        // Finished or snoozed (a crash or power-off never gets here), so nothing to ring again.
+        AlarmStore.setRingingAlarm(this, -1)
         _ringing.value = null
         super.onDestroy()
+    }
+
+    /** Strict mode: if the screen is switched off while ringing, switch it straight back on to the alarm. */
+    private fun watchScreenOff() {
+        if (screenOffReceiver != null) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                // A fresh full-screen notification makes Android turn the screen on and show the alarm.
+                val nm = getSystemService(NotificationManager::class.java)
+                nm.notify(WAKE_NOTIFICATION_ID, buildNotification(_ringing.value?.alarm))
+                handler.postDelayed({ nm.cancel(WAKE_NOTIFICATION_ID) }, 5_000)
+            }
+        }
+        ContextCompat.registerReceiver(this, receiver, IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED)
+        screenOffReceiver = receiver
     }
 
     private fun startSound(alarm: Alarm) {
@@ -203,6 +233,7 @@ class AlarmService : Service() {
         const val EXTRA_TEST = "test"
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 42
+        private const val WAKE_NOTIFICATION_ID = 43
 
         private const val VOLUME_TICK_MS = 250L
         private const val RAMP_MS = 30_000f

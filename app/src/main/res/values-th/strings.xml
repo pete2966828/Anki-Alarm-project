@@ -123,4 +123,11 @@
     <plurals name="pictures_added">
         <item quantity="other">เพิ่มรูปแล้ว %d รูป</item>
     </plurals>
+    <string name="strict_title">โหมดเข้มงวดระหว่างปลุก</string>
+    <string name="strict_detail">ระหว่างที่นาฬิกาปลุกดัง: กดปุ่มเปิดปิดแล้วหน้าจอจะติดกลับทันที ปุ่มปรับเสียงจะใช้ไม่ได้ และถ้ารีสตาร์ทโทรศัพท์ นาฬิกาปลุกจะดังอีกครั้ง การโทรและการโทรฉุกเฉินใช้ได้เสมอ ปุ่ม \"บันทึกและทดสอบ\" จะไม่ใช้โหมดเข้มงวด</string>
+    <string name="strict_needs_accessibility">หากต้องการให้ปิดเมนูปิดเครื่อง และพากลับมาที่นาฬิกาปลุกเมื่อคุณออกจากแอป ให้เปิด Anki Alarm ในการตั้งค่าการช่วยเหลือพิเศษ</string>
+    <string name="strict_restricted_hint">หากสวิตช์ในหน้านั้นเป็นสีเทา: ตั้งค่า → แอป → Anki Alarm → ⋮ → อนุญาตการตั้งค่าที่จำกัด แล้วลองอีกครั้ง</string>
+    <string name="strict_accessibility_on">เปิดการป้องกันเมนูปิดเครื่องและการออกจากแอปแล้ว</string>
+    <string name="action_open_accessibility">เปิดการตั้งค่าการช่วยเหลือพิเศษ</string>
+    <string name="strict_service_description">ใช้กับโหมดเข้มงวดของ Anki Alarm เฉพาะตอนที่นาฬิกาปลุกกำลังดัง: ปิดเมนูปิดเครื่อง และพากลับมาที่นาฬิกาปลุกเมื่อคุณออกจากแอป เวลาอื่นจะไม่ทำอะไรเลย และไม่อ่านข้อมูลบนหน้าจอของคุณ</string>
 </resources>
