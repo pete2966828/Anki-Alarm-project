@@ -232,6 +232,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     private var started = false
     private var saveError: String? = null
 
+    /** Cards answered during this alarm, so the same one isn't shown twice. */
+    private val answered = mutableSetOf<AnkiDroid.CardKey>()
+
     /** Application context in the app's chosen language, for messages shown on the alarm screen. */
     private val text get() = Lang.wrap(getApplication())
 
@@ -287,6 +290,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 }.isSuccess
             }
             saveError = if (ok) null else text.getString(R.string.save_answer_failed)
+            answered += AnkiDroid.CardKey(task.card.noteId, task.card.ord)
             _state.update { it.copy(done = it.done + 1) }
             loadNext()
         }
@@ -314,8 +318,12 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                     !AnkiDroid.isInstalled(ctx) -> null to text.getString(R.string.fallback_not_installed)
                     !AnkiDroid.hasPermission(ctx) -> null to text.getString(R.string.fallback_no_permission)
                     else -> try {
-                        AnkiDroid.nextDueCard(ctx, deckId)?.let { it to null }
-                            ?: (null to text.getString(R.string.fallback_none_due))
+                        val next = AnkiDroid.nextDueCard(ctx, deckId, answered)
+                        when {
+                            next.card != null -> next.card to null
+                            next.allSeen -> null to text.getString(R.string.fallback_all_seen)
+                            else -> null to text.getString(R.string.fallback_none_due)
+                        }
                     } catch (e: Exception) {
                         null to text.getString(R.string.fallback_error)
                     }

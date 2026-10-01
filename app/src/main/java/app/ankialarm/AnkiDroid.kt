@@ -48,26 +48,44 @@ object AnkiDroid {
         }.orEmpty().sortedBy { it.name.lowercase() }
 
     /** The next card AnkiDroid would show you, or null when nothing is due. */
-    fun nextDueCard(c: Context, deckId: Long?): DueCard? {
+    /** A card is identified by its note and its position within the note. */
+    data class CardKey(val noteId: Long, val ord: Int)
+
+    /** [card] is null when nothing is due; [allSeen] says whether that's because every due card was in [skip]. */
+    data class Next(val card: DueCard?, val allSeen: Boolean)
+
+    /**
+     * The next due card that isn't in [skip]. Anki brings a card back within minutes after
+     * "Again" (or during its first learning steps), so without skipping, an alarm with few due
+     * cards would show the same card over and over.
+     */
+    fun nextDueCard(c: Context, deckId: Long?, skip: Set<CardKey> = emptySet()): Next {
+        val limit = (skip.size + LOOKAHEAD).toString()
         val selection = if (deckId == null) "limit=?" else "limit=?,deckID=?"
-        val args = if (deckId == null) arrayOf("1") else arrayOf("1", deckId.toString())
+        val args = if (deckId == null) arrayOf(limit) else arrayOf(limit, deckId.toString())
+        var anyDue = false
         val due = c.contentResolver.query(SCHEDULE_URI, null, selection, args, null)?.use { cur ->
-            if (!cur.moveToFirst()) {
-                null
-            } else {
-                DueCard(
-                    noteId = cur.getLong(cur.getColumnIndexOrThrow("note_id")),
-                    ord = cur.getInt(cur.getColumnIndexOrThrow("ord")),
+            var found: DueCard? = null
+            while (found == null && cur.moveToNext()) {
+                anyDue = true
+                val key = CardKey(cur.getLong(cur.getColumnIndexOrThrow("note_id")), cur.getInt(cur.getColumnIndexOrThrow("ord")))
+                if (key in skip) continue
+                found = DueCard(
+                    noteId = key.noteId,
+                    ord = key.ord,
                     buttonCount = cur.getInt(cur.getColumnIndexOrThrow("button_count")),
                     nextReviewTimes = parseTimes(cur.stringOrNull("next_review_times")),
                     question = "",
                     answer = "",
                 )
             }
-        } ?: return null
-        val (question, answer) = cardContent(c, due.noteId, due.ord) ?: return null
-        return due.copy(question = question, answer = answer)
+            found
+        } ?: return Next(null, allSeen = anyDue)
+        val (question, answer) = cardContent(c, due.noteId, due.ord) ?: return Next(null, allSeen = false)
+        return Next(due.copy(question = question, answer = answer), allSeen = false)
     }
+
+    private const val LOOKAHEAD = 25
 
     /** Records the review in AnkiDroid. ease: 1 = Again, 2 = Hard, 3 = Good, 4 = Easy (fewer with 2–3 buttons). */
     fun answer(c: Context, card: DueCard, ease: Int, timeTakenMs: Long) {

@@ -140,4 +140,5 @@
     <string name="strict_accessibility_on">Power-off menu and leave protection is on.</string>
     <string name="action_open_accessibility">Open Accessibility settings</string>
     <string name="strict_service_description">Used by Anki Alarm\'s strict mode, only while an alarm is ringing: closes the power-off menu and brings the alarm back if you leave it. It does nothing at other times and doesn\'t read what\'s on your screen.</string>
+    <string name="fallback_all_seen">You\'ve answered every card that\'s due right now, so solve this instead.</string>
 </resources>

@@ -130,4 +130,5 @@
     <string name="strict_accessibility_on">เปิดการป้องกันเมนูปิดเครื่องและการออกจากแอปแล้ว</string>
     <string name="action_open_accessibility">เปิดการตั้งค่าการช่วยเหลือพิเศษ</string>
     <string name="strict_service_description">ใช้กับโหมดเข้มงวดของ Anki Alarm เฉพาะตอนที่นาฬิกาปลุกกำลังดัง: ปิดเมนูปิดเครื่อง และพากลับมาที่นาฬิกาปลุกเมื่อคุณออกจากแอป เวลาอื่นจะไม่ทำอะไรเลย และไม่อ่านข้อมูลบนหน้าจอของคุณ</string>
+    <string name="fallback_all_seen">คุณตอบการ์ดที่ถึงกำหนดครบทุกใบแล้ว ให้แก้โจทย์นี้แทน</string>
 </resources>
